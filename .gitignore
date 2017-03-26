@@ -1,0 +1,6 @@
+# virtualenv
+env
+
+# temporary files
+*.pyc
+*.*~

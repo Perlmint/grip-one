@@ -13,7 +13,14 @@ def render_all(root, entry, option):
 	render_queue = Queue()
 	render_queue.put(entry)
 
-	full_article = BeautifulSoup("<html><body></body></html>", "lxml")
+	full_article = BeautifulSoup("""<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title></title>
+  </head>
+  <body>
+  </body>
+</html>""", "lxml")
 	while not render_queue.empty():
 		page = render_queue.get()
 		try:

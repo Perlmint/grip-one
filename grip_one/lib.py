@@ -95,6 +95,9 @@ class Renderer:
 			rendered_page = render_page(path, **self.option)
 			soup = BeautifulSoup(rendered_page, "lxml")
 			makedirs(dirname(cache_path))
+
+			if soup.article is None:
+				raise Exception(soup.h1.get_text())
 			with open(cache_path, "w") as f:
 				f.write(rendered_page)
 		else:

@@ -28,7 +28,6 @@ class Renderer:
 		self.grip_option = option["grip"]
 		del option["grip"]
 		self.option = option
-		print(self.cache_root)
 
 	def render_all(self):
 		pages = set(self.entry)

@@ -11,6 +11,7 @@ def create_argparser():
 	parser.add_argument("--offline", action="store_true", help="use offline mode")
 	parser.add_argument("--out", default="-", help="where to out")
 	parser.add_argument("--login", action="store_true", help="login github to extend API limit")
+	parser.add_argument("--embed", action="store_true", help="embed images into html in base64 form")
 	return parser
 
 def main(parser=None):
@@ -19,7 +20,10 @@ def main(parser=None):
 	args = parser.parse_args()
 
 	render_option = {
-		"render_offline": args.offline
+		"grip": {
+			"render_offline": args.offline
+		},
+		"embed_img": args.embed
 	}
 
 	# prepare login option

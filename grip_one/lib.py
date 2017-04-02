@@ -1,12 +1,16 @@
+import mimetypes
+from binascii import b2a_base64
 from hashlib import sha256
 from tempfile import gettempdir
 from os import stat, mkdir, makedirs
-from os.path import join, exists, dirname
+from os.path import join, exists, dirname, splitext
 from urllib.parse import unquote, urlparse
 from queue import Queue
 
 from bs4 import BeautifulSoup
 from grip import render_page
+
+mimetypes.init()
 
 def is_absolute(url):
 	return bool(urlparse(url).netloc)
@@ -18,13 +22,15 @@ class Renderer:
 	def __init__(self, root, entry, option):
 		self.root = root
 		self.entry = entry
-		self.option = option
 		self.cache_root = join(gettempdir(), sha256(root.encode("utf-8")).hexdigest())
-
-	def render_all(self):
 		if not exists(self.cache_root):
 			mkdir(self.cache_root)
+		self.grip_option = option["grip"]
+		del option["grip"]
+		self.option = option
+		print(self.cache_root)
 
+	def render_all(self):
 		pages = set(self.entry)
 		render_queue = Queue()
 		render_queue.put(self.entry)
@@ -83,6 +89,7 @@ class Renderer:
 
 	def render(self, page):
 		path = join(self.root, page)
+		path_dir = dirname(path)
 		cache_path = join(self.cache_root, page)
 		build = True
 
@@ -92,14 +99,26 @@ class Renderer:
 			build = cache_mtime < src_mtime
 
 		if build:
-			rendered_page = render_page(path, **self.option)
+			rendered_page = render_page(path, **self.grip_option)
 			soup = BeautifulSoup(rendered_page, "lxml")
-			makedirs(dirname(cache_path))
 
 			if soup.article is None:
 				raise Exception(soup.h1.get_text())
+
+			if self.option["embed_img"]:
+				for img in soup.find_all("img"):
+					img_src = unquote(img["src"])
+					img_ext = splitext(img_src)[1]
+					img_mime = mimetypes.types_map[img_ext]
+					with open(join(path_dir, img_src), "rb") as img_file:
+						data = b2a_base64(img_file.read()).decode("utf-8")
+						img["src"] = "data:{0};base64,{1}".format(img_mime, data)
+						img["alt"] = img_src
+
+			if not exists(dirname(cache_path)):
+				makedirs(dirname(cache_path))
 			with open(cache_path, "w") as f:
-				f.write(rendered_page)
+				f.write(str(soup))
 		else:
 			with open(cache_path, "r") as f:
 				soup = BeautifulSoup(f, "lxml")

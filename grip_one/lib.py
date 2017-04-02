@@ -29,29 +29,30 @@ def render_all(root, entry, option):
 			raise Exception("Error occured while processing {0} - {1}".format(page, e))
 		full_article.body.append(body)
 		for link in links:
+			href = unquote(link.get("href"))
 			# already processed
-			if link in pages:
+			if href in pages:
 				continue
 
 			# ignore heading
-			if link.startswith("#"):
+			if href.startswith("#"):
 				continue
 
 			# ignore non-md files
 		# ex) images
-			if not link.endswith(".md"):
+			if not href.endswith(".md"):
 				continue
 
 			# ignore absolute url
-			if is_absolute(link):
+			if is_absolute(href):
 				continue
 
 			# not existing file...
-			if not exists(join(root, link)):
+			if not exists(join(root, href)):
 				raise Exception("{0} is not exists! broken link exists in {1}".format(link, page))
 
-			pages.add(link)
-			render_queue.put(link)
+			pages.add(href)
+			render_queue.put(href)
 
 	return full_article
 
@@ -60,4 +61,4 @@ def render(root, page, option):
 	soup = BeautifulSoup(rendered_page, "lxml")
 	page_body = soup.article
 	all_links = page_body.find_all("a")
-	return page_body, [unquote(link.get("href")) for link in all_links]
+	return page_body, [link for link in all_links]

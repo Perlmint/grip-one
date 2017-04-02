@@ -1,4 +1,7 @@
-from os.path import join, exists
+from hashlib import sha256
+from tempfile import gettempdir
+from os import stat, mkdir, makedirs
+from os.path import join, exists, dirname
 from urllib.parse import unquote, urlparse
 from queue import Queue
 
@@ -16,8 +19,12 @@ class Renderer:
 		self.root = root
 		self.entry = entry
 		self.option = option
+		self.cache_root = join(gettempdir(), sha256(root.encode("utf-8")).hexdigest())
 
 	def render_all(self):
+		if not exists(self.cache_root):
+			mkdir(self.cache_root)
+
 		pages = set(self.entry)
 		render_queue = Queue()
 		render_queue.put(self.entry)
@@ -75,8 +82,25 @@ class Renderer:
 		return full_article
 
 	def render(self, page):
-		rendered_page = render_page(join(self.root, page), **self.option)
-		soup = BeautifulSoup(rendered_page, "lxml")
+		path = join(self.root, page)
+		cache_path = join(self.cache_root, page)
+		build = True
+
+		if exists(cache_path):
+			src_mtime = stat(path).st_mtime
+			cache_mtime = stat(cache_path).st_mtime
+			build = cache_mtime < src_mtime
+
+		if build:
+			rendered_page = render_page(path, **self.option)
+			soup = BeautifulSoup(rendered_page, "lxml")
+			makedirs(dirname(cache_path))
+			with open(cache_path, "w") as f:
+				f.write(rendered_page)
+		else:
+			with open(cache_path, "r") as f:
+				soup = BeautifulSoup(f, "lxml")
+
 		page_body = soup.article
 		all_links = page_body.find_all("a")
 		return page_body, [link for link in all_links]

@@ -28,6 +28,10 @@ def render_all(root, entry, option):
 		except Exception as e:
 			raise Exception("Error occured while processing {0} - {1}".format(page, e))
 		full_article.body.append(body)
+		if page == entry:
+			full_article.title.append(
+				"".join([s for s in body.h1.strings]).strip()
+			)
 		for link in links:
 			href = unquote(link.get("href"))
 			# already processed

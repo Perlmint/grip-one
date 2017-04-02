@@ -99,6 +99,9 @@ class Renderer:
 			build = cache_mtime < src_mtime
 
 		if build:
+			if not self.grip_option["username"] and self.option["login"]:
+				login_info = self.option["login"]
+				self.grip_option.update(login_info)
 			rendered_page = render_page(path, **self.grip_option)
 			soup = BeautifulSoup(rendered_page, "lxml")
 

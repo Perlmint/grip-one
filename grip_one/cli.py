@@ -28,13 +28,19 @@ def main(parser=None):
 		"embed_img": args.embed,
 		"pdf": args.pdf,
 	}
+	login_info = {}
 
-	# prepare login option
+	def login():
+		# prepare login option
+		if not login_info["username"]:
+			username = input("Github username: ")
+			password = getpass("Github password: ")
+			login_info["username"] = username
+			login_info["password"] = password
+		return login_info
+
 	if args.login:
-		username = input("Github username: ")
-		password = getpass("Github password: ")
-		render_option["username"] = username
-		render_option["password"] = password
+		render_option["login"] = login
 
 	renderer = Renderer(args.repo_root, args.entry, render_option)
 	full_article = renderer.render_all()

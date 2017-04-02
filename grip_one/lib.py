@@ -11,12 +11,18 @@ def is_absolute(url):
 def page_to_bookmark(page_name):
 	return "page-{0}".format(page_name)
 
-def render_all(root, entry, option):
-	pages = set(entry)
-	render_queue = Queue()
-	render_queue.put(entry)
+class Renderer:
+	def __init__(self, root, entry, option):
+		self.root = root
+		self.entry = entry
+		self.option = option
 
-	full_article = BeautifulSoup("""<html>
+	def render_all(self):
+		pages = set(self.entry)
+		render_queue = Queue()
+		render_queue.put(self.entry)
+
+		full_article = BeautifulSoup("""<html>
   <head>
     <meta charset="UTF-8" />
     <title></title>
@@ -24,52 +30,53 @@ def render_all(root, entry, option):
   <body>
   </body>
 </html>""", "lxml")
-	while not render_queue.empty():
-		page = render_queue.get()
-		try:
-			body, links = render(root, page, option)
-		except Exception as e:
-			raise Exception("Error occured while processing {0} - {1}".format(page, e))
-		body.h1.a["id"] = page_to_bookmark(page)
-		if page == entry:
-			full_article.title.append(
-				"".join([s for s in body.h1.strings]).strip()
-			)
-		for link in links:
-			href = unquote(link.get("href"))
-			# ignore heading
-			if href.startswith("#"):
-				continue
 
-			# ignore non-md files
-		# ex) images
-			if not href.endswith(".md"):
-				continue
+		while not render_queue.empty():
+			page = render_queue.get()
+			try:
+				body, links = self.render(page)
+			except Exception as e:
+				raise Exception("Error occured while processing {0} - {1}".format(page, e))
+			body.h1.a["id"] = page_to_bookmark(page)
+			if page == self.entry:
+				full_article.title.append(
+					"".join([s for s in body.h1.strings]).strip()
+				)
+			for link in links:
+				href = unquote(link.get("href"))
+				# ignore heading
+				if href.startswith("#"):
+					continue
 
-			# ignore absolute url
-			if is_absolute(href):
-				continue
+				# ignore non-md files
+			# ex) images
+				if not href.endswith(".md"):
+					continue
 
-			# modify anchor to bookmark
-			link["href"] = "#{0}".format(page_to_bookmark(href))
+				# ignore absolute url
+				if is_absolute(href):
+					continue
 
-			# already processed
-			if href in pages:
-				continue
+				# modify anchor to bookmark
+				link["href"] = "#{0}".format(page_to_bookmark(href))
 
-			# not existing file...
-			if not exists(join(root, href)):
-				raise Exception("{0} is not exists! broken link exists in {1}".format(link, page))
+				# already processed
+				if href in pages:
+					continue
 
-			pages.add(href)
-			render_queue.put(href)
-		full_article.body.append(body)
+				# not existing file...
+				if not exists(join(self.root, href)):
+					raise Exception("{0} is not exists! broken link exists in {1}".format(link, page))
 
-	return full_article
+				pages.add(href)
+				render_queue.put(href)
+			full_article.body.append(body)
 
-def render(root, page, option):
-	rendered_page = render_page(join(root, page), **option)
-	soup = BeautifulSoup(rendered_page, "lxml")
-	page_body = soup.article
-	all_links = page_body.find_all("a")
-	return page_body, [link for link in all_links]
+		return full_article
+
+	def render(self, page):
+		rendered_page = render_page(join(self.root, page), **self.option)
+		soup = BeautifulSoup(rendered_page, "lxml")
+		page_body = soup.article
+		all_links = page_body.find_all("a")
+		return page_body, [link for link in all_links]

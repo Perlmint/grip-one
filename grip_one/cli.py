@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 from getpass import getpass
 from sys import stdout
 
-from .lib import render_all
+from .lib import Renderer
 
 def create_argparser():
 	parser = ArgumentParser(description="Make single html page from Markdown repo")
@@ -29,7 +29,8 @@ def main(parser=None):
 		render_option["username"] = username
 		render_option["password"] = password
 
-	full_article = render_all(args.repo_root, args.entry, render_option)
+	renderer = Renderer(args.repo_root, args.entry, render_option)
+	full_article = renderer.render_all()
 
 	if args.out == "-":
 		out = stdout

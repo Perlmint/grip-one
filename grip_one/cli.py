@@ -16,10 +16,31 @@ def create_argparser():
 	parser.add_argument("--pdf", choices=["disable", "pdfkit"], default="disable", help="Select backend to use for making pdf")
 	return parser
 
+def validate_args(args):
+	ext = splitext(args.out)[1]
+	if args.out == "-" and not args.embed:
+		raise Exception("non embedded image option is not allowed with stdout option")
+
+	if args.pdf == "disable" and ext != ".html":
+		if ext == "":
+			args.out += ".html"
+		else:
+			raise Exception("html out mode is enabled! out filename should have .html extension")
+
+	if args.pdf != "disable" and ext != ".pdf":
+		if ext == "":
+			args.out += ".pdf"
+		else:
+			raise Exception("pdf out mode is enabled! out filename should have .pdf extension")
+
+	if args.login and args.offline:
+		raise Exception("login and offline option can be use at the same time")
+
 def main(parser=None):
 	if not parser:
 		parser = create_argparser()
 	args = parser.parse_args()
+	validate_args(args)
 
 	render_option = {
 		"grip": {

@@ -6,6 +6,7 @@ from os import stat, mkdir, makedirs
 from os.path import join, exists, dirname, splitext
 from urllib.parse import unquote, urlparse
 from queue import Queue
+from pickle import dump, load
 
 from bs4 import BeautifulSoup
 from grip import render_page
@@ -18,6 +19,11 @@ def is_absolute(url):
 def page_to_bookmark(page_name):
 	return "page-{0}".format(page_name)
 
+def compare_dict(dict1, dict2):
+	diff = set(dict1.items()) - set(dict2.items())
+
+	return len(diff) != 0
+
 class Renderer:
 	def __init__(self, root, entry, option):
 		self.root = root
@@ -28,6 +34,18 @@ class Renderer:
 		self.grip_option = option["grip"]
 		del option["grip"]
 		self.option = option
+		self.login = option["login"]
+		del self.option["login"]
+
+		self.invalid_cache = False
+		cache_option_path = join(self.cache_root, ".grip-one-option")
+		if exists(cache_option_path):
+			with open(cache_option_path, "rb") as f:
+				loaded_option = load(f)
+			if not compare_dict(self.option, loaded_option):
+				self.invalid_cache = True
+		with open(cache_option_path, "wb") as f:
+			dump(self.option, f)
 
 	def render_all(self):
 		pages = set(self.entry)
@@ -96,14 +114,14 @@ class Renderer:
 		cache_path = join(self.cache_root, page)
 		build = True
 
-		if exists(cache_path):
+		if not self.invalid_cache and exists(cache_path):
 			src_mtime = stat(path).st_mtime
 			cache_mtime = stat(cache_path).st_mtime
 			build = cache_mtime < src_mtime
 
 		if build:
-			if not self.grip_option["username"] and self.option["login"]:
-				login_info = self.option["login"]()
+			if not self.grip_option["username"] and self.login:
+				login_info = self.login()
 				self.grip_option.update(login_info)
 			rendered_page = render_page(path, **self.grip_option)
 			soup = BeautifulSoup(rendered_page, "lxml")

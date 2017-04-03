@@ -19,10 +19,17 @@ def is_absolute(url):
 def page_to_bookmark(page_name):
 	return "page-{0}".format(page_name)
 
-def compare_dict(dict1, dict2):
-	diff = set(dict1.items()) - set(dict2.items())
+def equal_dict(dict1, dict2):
+	key1, key2 = dict1.keys(), dict2.keys()
 
-	return len(diff) != 0
+	if key1 != key2:
+		return False
+
+	for key in key1:
+		if dict1[key] != dict2[key]:
+			return False
+
+	return True
 
 class Renderer:
 	def __init__(self, root, entry, option):
@@ -42,7 +49,7 @@ class Renderer:
 		if exists(cache_option_path):
 			with open(cache_option_path, "rb") as f:
 				loaded_option = load(f)
-			if not compare_dict(self.option, loaded_option):
+			if not equal_dict(self.option, loaded_option):
 				self.invalid_cache = True
 		with open(cache_option_path, "wb") as f:
 			dump(self.option, f)

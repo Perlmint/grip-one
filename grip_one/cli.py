@@ -1,6 +1,8 @@
 from argparse import ArgumentParser
 from getpass import getpass
+from shutil import copy2
 from sys import stdout
+from os.path import basename, relpath, join, splitext, dirname
 
 from .lib import Renderer
 from pdfkit import from_string
@@ -44,12 +46,17 @@ def main(parser=None):
 
 	render_option = {
 		"grip": {
-			"render_offline": args.offline
+			"render_offline": args.offline,
+			"username": None,
+			"password": None
 		},
 		"embed_img": args.embed,
 		"pdf": args.pdf,
 	}
-	login_info = {}
+	login_info = {
+		"username": None,
+		"password": None
+	}
 
 	def login():
 		# prepare login option
@@ -64,16 +71,20 @@ def main(parser=None):
 		render_option["login"] = login
 
 	renderer = Renderer(args.repo_root, args.entry, render_option)
-	full_article = renderer.render_all()
+	full_article, assets = renderer.render_all()
 
 	full_article_str = full_article.prettify()
+
+	if not args.embed:
+		outdir = dirname(args.out)
+		for asset in assets:
+			out_asset = join(outdir, relpath(asset, args.repo_root))
+			copy2(asset, out_asset)
 
 	if args.pdf == "disable":
 		out_content = full_article_str.encode("utf-8")
 	elif args.pdf == "pdfkit":
 		out_content = from_string(full_article_str, False)
-	else:
-		raise Exception("invalid pdf mode")
 
 	if args.out == "-":
 		out = stdout

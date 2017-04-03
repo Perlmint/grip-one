@@ -43,10 +43,14 @@ class Renderer:
   </body>
 </html>""", "lxml")
 
+		assets = set()
+
 		while not render_queue.empty():
 			page = render_queue.get()
 			try:
-				body, links = self.render(page)
+				body, links, imgs = self.render(page)
+				for img in imgs:
+					assets.add(img)
 			except Exception as e:
 				raise Exception("Error occured while processing {0} - {1}".format(page, e))
 			body.h1.a["id"] = page_to_bookmark(page)
@@ -84,7 +88,7 @@ class Renderer:
 				render_queue.put(href)
 			full_article.body.append(body)
 
-		return full_article
+		return full_article, assets
 
 	def render(self, page):
 		path = join(self.root, page)
@@ -99,7 +103,7 @@ class Renderer:
 
 		if build:
 			if not self.grip_option["username"] and self.option["login"]:
-				login_info = self.option["login"]
+				login_info = self.option["login"]()
 				self.grip_option.update(login_info)
 			rendered_page = render_page(path, **self.grip_option)
 			soup = BeautifulSoup(rendered_page, "lxml")
@@ -125,6 +129,11 @@ class Renderer:
 			with open(cache_path, "r") as f:
 				soup = BeautifulSoup(f, "lxml")
 
+		if not self.option["embed_img"]:
+			imgs = [join(path_dir, unquote(img["src"])) for img in soup.find_all("img") if not img["src"].startswith("data:")]
+		else:
+			imgs = []
+
 		page_body = soup.article
 		all_links = page_body.find_all("a")
-		return page_body, [link for link in all_links]
+		return page_body, [link for link in all_links], imgs

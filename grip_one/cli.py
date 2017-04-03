@@ -2,10 +2,14 @@ from argparse import ArgumentParser
 from getpass import getpass
 from shutil import copy2
 from sys import stdout
-from os.path import basename, relpath, join, splitext, dirname
+from os import linesep
+from os.path import basename, relpath, join, splitext, dirname, exists
 
 from .lib import Renderer
 from pdfkit import from_string
+import requests
+
+MAIN_DEFAULT_CSS = "https://sindresorhus.com/github-markdown-css/github-markdown.css"
 
 def create_argparser():
 	parser = ArgumentParser(description="Make single html page from Markdown repo")
@@ -16,6 +20,8 @@ def create_argparser():
 	parser.add_argument("--login", action="store_true", help="login github to extend API limit")
 	parser.add_argument("--embed", action="store_true", help="embed images into html in base64 form")
 	parser.add_argument("--pdf", choices=["disable", "pdfkit"], default="disable", help="Select backend to use for making pdf")
+	parser.add_argument("--maincss", default="default", help="main css for result - default makes result that look like github markdown view")
+	parser.add_argument("--css", default=[], nargs="*", help="additional css")
 	return parser
 
 def validate_args(args):
@@ -38,11 +44,21 @@ def validate_args(args):
 	if args.login and args.offline:
 		raise Exception("login and offline option can be use at the same time")
 
+	if args.maincss == "default":
+		args.maincss = MAIN_DEFAULT_CSS
+	elif "://" not in args.maincss and not exists(args.maincss):
+		raise Exception("main css is invalid, it looks like local file, but it is not exists")
+
+	for css in args.css:
+		if "://" not in css and not exists(css):
+			raise Exception("css({0}) is invalid, it looks like local file, but it is not exists".format(css))
+
 def main(parser=None):
 	if not parser:
 		parser = create_argparser()
 	args = parser.parse_args()
 	validate_args(args)
+	css = [args.maincss] + args.css
 
 	render_option = {
 		"grip": {
@@ -52,6 +68,7 @@ def main(parser=None):
 		},
 		"embed_img": args.embed,
 		"pdf": args.pdf,
+		"css": css
 	}
 	login_info = {
 		"username": None,
@@ -84,7 +101,21 @@ def main(parser=None):
 	if args.pdf == "disable":
 		out_content = full_article_str.encode("utf-8")
 	elif args.pdf == "pdfkit":
-		out_content = from_string(full_article_str, False)
+		pdf_option = {
+		}
+		if css:
+			merged_css = join(renderer.cache_root, "css.css")
+			with open(merged_css, "w") as css_file:
+				for _css in css:
+					if _css.startswith("http"):
+						css_file.write(requests.get(_css).text)
+					else:
+						with open(_css, "r") as other_css:
+							css_file.write(other_css.read())
+					css_file.write(linesep)
+			pdf_option["css"] = merged_css
+
+		out_content = from_string(full_article_str, False, **pdf_option)
 
 	if args.out == "-":
 		out = stdout

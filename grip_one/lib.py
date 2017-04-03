@@ -61,6 +61,13 @@ class Renderer:
   </body>
 </html>""", "lxml")
 
+		head = full_article.head
+		for css in self.option["css"]:
+			csslink = full_article.new_tag("link")
+			csslink["href"] = css
+			csslink["rel"] = "stylesheet"
+			head.append(csslink)
+
 		assets = set()
 
 		while not render_queue.empty():

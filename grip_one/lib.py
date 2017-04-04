@@ -62,6 +62,8 @@ class Renderer:
 		full_article = BeautifulSoup("""<html>
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width: 1280, initial-scale=1" />
+    <style> body { width: 980px; margin-left: auto; margin-right: auto; } </style>
     <title></title>
   </head>
   <body>

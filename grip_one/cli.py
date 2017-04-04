@@ -101,7 +101,18 @@ def main(parser=None):
 	if args.pdf == "disable":
 		out_content = full_article_str.encode("utf-8")
 	elif args.pdf == "pdfkit":
+		pdf_kwargs = {
+		}
 		pdf_option = {
+			# "page-size": "A4",
+			"disable-javascript": "",
+			# fxxk... must set width & height in px...
+			"page-width": "595px",
+			"page-height": "842px",
+			"margin-top": "52px",
+			"margin-left": "52px",
+			"margin-bottom": "52px",
+			"margin-right": "52px"
 		}
 		if css:
 			merged_css = join(renderer.cache_root, "css.css")
@@ -113,9 +124,9 @@ def main(parser=None):
 						with open(_css, "r") as other_css:
 							css_file.write(other_css.read())
 					css_file.write(linesep)
-			pdf_option["css"] = merged_css
+			pdf_kwargs["css"] = merged_css
 
-		out_content = from_string(full_article_str, False, **pdf_option)
+		out_content = from_string(full_article_str, False, options=pdf_option, **pdf_kwargs)
 
 	if args.out == "-":
 		out = stdout
